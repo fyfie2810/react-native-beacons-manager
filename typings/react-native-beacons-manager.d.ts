@@ -21,6 +21,8 @@ declare module 'react-native-beacons-manager' {
     // iOS only
     ///////////////////////////////////////////////////////
 
+    public BeaconsEventEmitter: NativeEventEmitter;
+
     requestAlwaysAuthorization(): void;
 
     requestWhenInUseAuthorization(): void;
