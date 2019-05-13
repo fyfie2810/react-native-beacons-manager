@@ -200,6 +200,16 @@ public class BeaconsAndroidModule extends ReactContextBaseJavaModule implements 
   }
 
   @ReactMethod
+  public void checkBluetoothSupported(Callback callback) {
+    BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+    if (bluetoothAdapter && getDefaultAdapter.isEnabled) {
+      callback.invoke(true);
+      return;
+    }
+    callback.invoke(false);
+  }
+
+  @ReactMethod
   public void getMonitoredRegions(Callback callback) {
       WritableArray array = new WritableNativeArray();
       for (Region region: mBeaconManager.getMonitoredRegions()) {
@@ -235,7 +245,7 @@ public class BeaconsAndroidModule extends ReactContextBaseJavaModule implements 
     // deprecated since v2.9 (see github: https://github.com/AltBeacon/android-beacon-library/releases/tag/2.9)
     // mBeaconManager.setMonitorNotifier(mMonitorNotifier);
     // mBeaconManager.setRangeNotifier(mRangeNotifier);
-    //mBeaconManager.addMonitorNotifier(mMonitorNotifier);
+    mBeaconManager.addMonitorNotifier(mMonitorNotifier);
     mBeaconManager.addRangeNotifier(mRangeNotifier);
     sendEvent(mReactContext, "beaconServiceConnected", null);
   }

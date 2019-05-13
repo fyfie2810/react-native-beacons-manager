@@ -145,6 +145,8 @@ declare module 'react-native-beacons-manager' {
         uuid?: string
       }
     ): Promise<any>;
+	
+	checkBluetoothSupported():Promise<boolean>;
   }
 
   const beacons: Beacons;
