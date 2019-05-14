@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.support.annotation.Nullable;
 import android.util.Log;
+import android.bluetooth.BluetoothAdapter;
 
 import com.facebook.react.bridge.Callback;
 import com.facebook.react.bridge.ReactApplicationContext;
@@ -202,7 +203,7 @@ public class BeaconsAndroidModule extends ReactContextBaseJavaModule implements 
   @ReactMethod
   public void checkBluetoothSupported(Callback callback) {
     BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-    if (bluetoothAdapter && getDefaultAdapter.isEnabled) {
+    if (bluetoothAdapter!= null && bluetoothAdapter.isEnabled()) {
       callback.invoke(true);
       return;
     }
