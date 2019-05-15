@@ -265,7 +265,6 @@ RCT_EXPORT_METHOD(checkBluetoothSupported:(RCTResponseSenderBlock)callback)
 - (void)centralManagerDidUpdateState:(CBCentralManager *)central
 {
     bluetoothState = central.state;
-    
 }
 
 -(NSString *)nameForAuthorizationStatus:(CLAuthorizationStatus)authorizationStatus
