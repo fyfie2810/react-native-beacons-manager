@@ -7,7 +7,7 @@
 //
 
 #import <CoreLocation/CoreLocation.h>
-#import <CoreBluetooth/CoreBluetooth.h>
+
 #import <React/RCTBridge.h>
 #import <React/RCTConvert.h>
 #import <React/RCTEventDispatcher.h>
@@ -253,7 +253,6 @@ RCT_EXPORT_METHOD(shouldDropEmptyRanges:(BOOL)drop)
 
 RCT_EXPORT_METHOD(checkBluetoothSupported:(RCTResponseSenderBlock)callback)
 {
-  [self.locationManager checkBluetoothSupported];
   callback(@[YES]);
 }
 
