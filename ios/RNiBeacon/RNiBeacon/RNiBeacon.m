@@ -7,7 +7,7 @@
 //
 
 #import <CoreLocation/CoreLocation.h>
-
+#import <CoreBluetooth/CoreBluetooth.h>
 #import <React/RCTBridge.h>
 #import <React/RCTConvert.h>
 #import <React/RCTEventDispatcher.h>
@@ -23,10 +23,13 @@ static NSString *const kEddystoneRegionID = @"EDDY_STONE_REGION_ID";
 @property (strong, nonatomic) CLLocationManager *locationManager;
 @property (strong, nonatomic) ESSBeaconScanner *eddyStoneScanner;
 @property (assign, nonatomic) BOOL dropEmptyRanges;
+@property (strong, nonatomic) CBCentralManager *centralManager;
 
 @end
 
-@implementation RNiBeacon
+@implementation RNiBeacon{
+    CBManagerState bluetoothState;
+}
 
 RCT_EXPORT_MODULE()
 
@@ -43,6 +46,7 @@ RCT_EXPORT_MODULE()
       
     self.eddyStoneScanner = [[ESSBeaconScanner alloc] init];
     self.eddyStoneScanner.delegate = self;
+    self.centralManager = [[CBCentralManager alloc] initWithDelegate:self queue:dispatch_get_main_queue() options:[NSDictionary dictionaryWithObject:[NSNumber numberWithInt:0] forKey:CBCentralManagerOptionShowPowerAlertKey]];
   }
 
   return self;
@@ -253,7 +257,15 @@ RCT_EXPORT_METHOD(shouldDropEmptyRanges:(BOOL)drop)
 
 RCT_EXPORT_METHOD(checkBluetoothSupported:(RCTResponseSenderBlock)callback)
 {
-  callback(@[YES]);
+    bool isOn = bluetoothState == CBCentralManagerStatePoweredOn;
+    callback(@[@(isOn)]);
+    
+}
+
+- (void)centralManagerDidUpdateState:(CBCentralManager *)central
+{
+    bluetoothState = central.state;
+    
 }
 
 -(NSString *)nameForAuthorizationStatus:(CLAuthorizationStatus)authorizationStatus
