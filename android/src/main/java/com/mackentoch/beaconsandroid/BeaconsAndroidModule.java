@@ -7,6 +7,8 @@ import android.support.annotation.Nullable;
 import android.util.Log;
 import android.bluetooth.BluetoothAdapter;
 
+import com.estimote.coresdk.observation.region.beacon.BeaconRegion;
+import com.estimote.proximity_sdk.api.ProximityZone;
 import com.facebook.react.bridge.Callback;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContext;
@@ -35,7 +37,13 @@ import org.altbeacon.beacon.service.RunningAverageRssiFilter;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+
+import estimote.EstimoteManager;
+import estimote.EstimoteProximity;
+
+import static com.facebook.react.bridge.UiThreadUtil.runOnUiThread;
 
 public class BeaconsAndroidModule extends ReactContextBaseJavaModule implements BeaconConsumer {
   private static final String LOG_TAG = "BeaconsAndroidModule";
@@ -44,6 +52,8 @@ public class BeaconsAndroidModule extends ReactContextBaseJavaModule implements 
   private BeaconManager mBeaconManager;
   private Context mApplicationContext;
   private ReactApplicationContext mReactContext;
+
+  private EstimoteManager estimoteManager;
 
   public BeaconsAndroidModule(ReactApplicationContext reactContext) {
     super(reactContext);
@@ -56,6 +66,27 @@ public class BeaconsAndroidModule extends ReactContextBaseJavaModule implements 
     // need to bind at instantiation so that service loads (to test more)
     mBeaconManager.getBeaconParsers().add(new BeaconParser().setBeaconLayout("m:0-3=4c000215,i:4-19,i:20-21,i:22-23,p:24-24"));
     bindManager();
+
+    // Estimote
+    try {
+
+      estimoteManager = new EstimoteManager(mApplicationContext);
+
+      estimoteManager.setServiceReadyListener(new EstimoteManager.ServiceReadyListener() {
+        @Override
+        public void onServiceReady() {
+          Log.d(LOG_TAG, "estimote service ready");
+          BeaconsAndroidModule.this.onBeaconServiceConnect();
+        }
+      });
+
+      Log.d(LOG_TAG, "estimote created");
+    }catch (Exception e){
+      Log.d(LOG_TAG, e.toString());
+    }
+
+
+
   }
 
   @Override
@@ -156,6 +187,7 @@ public class BeaconsAndroidModule extends ReactContextBaseJavaModule implements 
   @ReactMethod
   public void setBackgroundScanPeriod(int period) {
       mBeaconManager.setBackgroundScanPeriod((long) period);
+      estimoteManager.setBackgroundScanPeriod((long) period);
   }
 
   @ReactMethod
@@ -246,8 +278,17 @@ public class BeaconsAndroidModule extends ReactContextBaseJavaModule implements 
     // deprecated since v2.9 (see github: https://github.com/AltBeacon/android-beacon-library/releases/tag/2.9)
     // mBeaconManager.setMonitorNotifier(mMonitorNotifier);
     // mBeaconManager.setRangeNotifier(mRangeNotifier);
-    mBeaconManager.addMonitorNotifier(mMonitorNotifier);
-    mBeaconManager.addRangeNotifier(mRangeNotifier);
+    // mBeaconManager.addMonitorNotifier(mMonitorNotifier);
+    // mBeaconManager.addRangeNotifier(mRangeNotifier);
+
+
+    estimoteManager.setBeaconDiscoveredListener(new EstimoteManager.BeaconDiscoveredListener() {
+      @Override
+      public void onBeaconDiscovered(Collection<com.estimote.coresdk.recognition.packets.Beacon> beacons, BeaconRegion beaconRegion) {
+        sendEvent(mReactContext, "beaconsDidRange", createEstimoteRangingResponse(beacons, beaconRegion));
+      }
+    });
+
     sendEvent(mReactContext, "beaconServiceConnected", null);
   }
 
@@ -342,12 +383,22 @@ public class BeaconsAndroidModule extends ReactContextBaseJavaModule implements 
       try {
           Region region = createRegion(regionId, beaconUuid);
           mBeaconManager.startRangingBeaconsInRegion(region);
-          resolve.invoke();
+
+          // Estimote
+          BeaconRegion beaconRegion = estimoteManager.createSecureRegion(regionId, beaconUuid);
+          estimoteManager.startRanging(beaconRegion);
+
+
+        EstimoteProximity estimoteProximity = new EstimoteProximity(mApplicationContext);
+        ProximityZone zone = estimoteProximity.createProximityZone("Tola's Desk", 3);
+        estimoteProximity.startObserving(zone);
+        resolve.invoke();
       } catch (Exception e) {
           Log.e(LOG_TAG, "startRanging, error: ", e);
           reject.invoke(e.getMessage());
       }
   }
+
 
   private RangeNotifier mRangeNotifier = new RangeNotifier() {
       @Override
@@ -390,6 +441,30 @@ public class BeaconsAndroidModule extends ReactContextBaseJavaModule implements 
       return map;
   }
 
+
+  private WritableMap createEstimoteRangingResponse(Collection<com.estimote.coresdk.recognition.packets.Beacon> beacons, BeaconRegion region) {
+    WritableMap map = new WritableNativeMap();
+    map.putString("identifier", region.getIdentifier());
+    map.putString("uuid", region.getProximityUUID() != null ? region.getProximityUUID().toString() : "");
+    WritableArray a = new WritableNativeArray();
+    for (com.estimote.coresdk.recognition.packets.Beacon beacon : beacons) {
+      WritableMap b = new WritableNativeMap();
+      b.putString("uuid", beacon.getProximityUUID().toString());
+      b.putString("name", beacon.getUniqueKey());
+      b.putString("macAddress", beacon.getMacAddress().toString());
+
+      b.putInt("major", beacon.getMajor());
+      b.putInt("minor", beacon.getMinor());
+      b.putInt("rssi", beacon.getRssi());
+      b.putDouble("distance", 999.0);
+      b.putString("proximity", "far");
+
+      a.pushMap(b);
+    }
+    map.putArray("beacons", a);
+    return map;
+  }
+
   private String getProximity(double distance) {
       if (distance == -1.0) {
           return "unknown";
@@ -405,8 +480,10 @@ public class BeaconsAndroidModule extends ReactContextBaseJavaModule implements 
   @ReactMethod
   public void stopRanging(String regionId, String beaconUuid, Callback resolve, Callback reject) {
       Region region = createRegion(regionId, beaconUuid);
+      BeaconRegion beaconRegion = estimoteManager.createSecureRegion(regionId, beaconUuid);
       try {
           mBeaconManager.stopRangingBeaconsInRegion(region);
+          estimoteManager.stopRanging(beaconRegion);
           resolve.invoke();
       } catch (Exception e) {
           Log.e(LOG_TAG, "stopRanging, error: ", e);
