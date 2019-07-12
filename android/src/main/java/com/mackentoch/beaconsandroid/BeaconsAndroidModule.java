@@ -49,7 +49,11 @@ public class BeaconsAndroidModule extends ReactContextBaseJavaModule implements 
     super(reactContext);
     Log.d(LOG_TAG, "BeaconsAndroidModule - started");
     this.mReactContext = reactContext;
-    this.mApplicationContext = reactContext.getApplicationContext();
+  }
+
+    @Override
+    public void initialize() {
+        this.mApplicationContext = this.mReactContext.getApplicationContext();
 
 
     this.mBeaconManager = BeaconManager.getInstanceForApplication(mApplicationContext);
@@ -419,11 +423,11 @@ public class BeaconsAndroidModule extends ReactContextBaseJavaModule implements 
    * Utils
    **********************************************************************************************/
   private void sendEvent(ReactContext reactContext, String eventName, @Nullable WritableMap params) {
-    if (reactContext.hasActiveCatalystInstance()) {
+      if (reactContext.hasActiveCatalystInstance()) {
       reactContext
-        .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
-        .emit(eventName, params);
-    }
+                .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+                .emit(eventName, params);
+      }
   }
 
   private Region createRegion(String regionId, String beaconUuid) {

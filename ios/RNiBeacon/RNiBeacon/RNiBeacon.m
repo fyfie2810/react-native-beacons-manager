@@ -359,6 +359,11 @@ RCT_EXPORT_METHOD(checkBluetoothSupported:(RCTResponseSenderBlock)callback)
 
 -(void)locationManager:(CLLocationManager *)manager
         didEnterRegion:(CLBeaconRegion *)region {
+
+  if (! [region respondsToSelector:@selector(proximityUUID)]) {
+    return;
+  }
+
   NSDictionary *event = [self convertBeaconRegionToDict: region];
 
   [self sendEventWithName:@"regionDidEnter" body:event];
@@ -366,6 +371,11 @@ RCT_EXPORT_METHOD(checkBluetoothSupported:(RCTResponseSenderBlock)callback)
 
 -(void)locationManager:(CLLocationManager *)manager
          didExitRegion:(CLBeaconRegion *)region {
+
+  if (! [region respondsToSelector:@selector(proximityUUID)]) {
+    return;
+  }
+
   NSDictionary *event = [self convertBeaconRegionToDict: region];
 
   [self sendEventWithName:@"regionDidExit" body:event];
